@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.lib.function_base import average
 import scipy as sp
 import pandas as pd
 import copy
@@ -109,7 +110,8 @@ def runningStatistics(data,columns,corrLength=None):
         
     return pd.DataFrame(runningStats)
 
-def plotTimeSeries(data,observables,x=None,parameters=None,width=1000,height=500,showMean=True,runningMean=True,alpha=0.8,overlap=False,corrLength=None):
+
+def plotTimeSeries(data,observables,x=None,parameters=None,width=1000,height=500,showMean=True,runningMean=True,alpha=0.8,overlap=False,corrLength=None,sampleFraction=None):
     noKeys=False
     if parameters is None:
         parameters=["__dummy_key"]
@@ -129,10 +131,15 @@ def plotTimeSeries(data,observables,x=None,parameters=None,width=1000,height=500
 
     fig = make_subplots(rows=nPlots, cols=1)
 
-
+    def sampleData(df):
+        if sampleFraction is not None:
+            return df.sample(frac=sampleFraction).sort_index()
+        else:
+            return df
 
     for i, (key,df) in tqdm.tqdm(enumerate(groups)):
         
+        df=sampleData(df)
         agg=aggregate(df,observables)
         color="orange"
         runStats=runningStatistics(df,observables,corrLength=corrLength)
@@ -295,7 +302,7 @@ def concatenateData(f):
         groups=data.groupby(parameters)
 
         results=[]
-        for i, (key,df) in enumerate(groups):
+        for i, (key,df) in tqdm.tqdm(enumerate(groups)):
             try:
                 result=f(df,*args,**kwds)
             except TypeError as e:
@@ -308,10 +315,12 @@ def concatenateData(f):
                 
                 if not ( hasattr(key, '__iter__') ) or isinstance( key, str)  :
                     keys=[key]
+
+                else:
+                    keys=key
                 
                 for value,name in zip(keys,parameters):
                     result[name]=value
-            
             results.append(result)
         return pd.concat(results).reset_index(drop=True)
     return wrapped
@@ -336,7 +345,9 @@ def concatenateFigures(f):
         results=[]
         for i, (key,df) in enumerate(groups):
             try:
-                fig=f(fig,df,*args,**kwds)
+                newFig=f(fig,df,*args,**kwds)
+                if newFig is not None:
+                    fig=newFig
             except TypeError as e:
                 
                 print ("Warning. Error for key=  " + str(key) )
@@ -369,11 +380,25 @@ def fitModel(data , f , x , y, delta=None  ):
     
     return pd.DataFrame(result,index=[0])
 
+@concatenateData
+def rebatch(data,nSamples):
+    
+    
+    dfs=np.array_split(data.reset_index(drop=True),nSamples)
+    for df in dfs:
+        df["iteration"]=np.mean(df["iteration"])
+    averagedDfs=[ df.mean(axis=0).to_frame().T for df in dfs]
+    if len(averagedDfs) !=0:
+        result=pd.concat(averagedDfs)
+        
+        return result
+    
 
 
 
 @concatenateFigures
 def addFittedModel(fig , data , f, name, row =1 , col=1  ,nSamples=1000,*args, **kwds ):
+    
     full_fig = fig.full_figure_for_development(warn=False)
     xRange=full_fig.layout.xaxis.range
     

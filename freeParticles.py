@@ -6,6 +6,7 @@ from scipy.optimize import brentq
 import matplotlib.pylab as pl
 from scipy.integrate import quad
 
+
 def G(p,z):
     return float(mpmath.polylog(p, z))
 
@@ -48,7 +49,7 @@ def freeEnergyMixtureHF(n1,n2,T,g,g12):
     n0_1 = n1 - xi/landa**3
     n0_2 = n2 - xi/landa**3
 
-    y1 = np.exp( - beta * g * n0_1)
+    y1 = np.exp(  - beta * g * n0_1)
     y2 = np.exp( - beta * g * n0_2)
 
     if (n1*landa**3 >= xi) and (n2*landa**3 >= xi):
@@ -59,9 +60,62 @@ def freeEnergyMixtureHF(n1,n2,T,g,g12):
     
     return F
 
+def susceptibilityMixtureHF(n1,n2,T,g,g12):
+    # returns the free energy per unit volume of a mixture
+    xi=G(3/2,1)
+
+
+    landa = np.sqrt(2*pi/T) 
+    beta=1/T
+    n0_1 = n1 - xi/landa**3
+    n0_2 = n2 - xi/landa**3
+    
+    y1 = np.exp( -  beta * g * n0_1 )
+    y2 = np.exp(  -  beta * g * n0_2)
+
+
+    if  (n0_1 > 0 and n0_2 > 0 ):
+        chi = ( g - g12)/2  - beta*g**2/(4*landa**3) * (  G(1/2,y1) + G(1/2,y2)     )
+    else:
+        chi=None
+    
+    return chi
+
+
+
+susceptibilityMixtureHF=np.vectorize(susceptibilityMixtureHF)
+
+
+def chemicalPotentialMixtureHF(n1,n2,T,g,g12):
+    # returns the free energy per unit volume of a mixture
+    xi=G(3/2,1)
+    landa = np.sqrt(2*pi/T) 
+    beta=1/T
+    n0_1 = n1 - xi/landa**3
+    n0_2 = n2 - xi/landa**3
+
+    y1 = np.exp( - beta * g * n0_1)
+    y2 = np.exp( - beta * g * n0_2)
+
+
+    if n0_1 > 0:
+        mu1= g*n1 + g12*n2 + 1/( landa**3) * g * G(3/2,y1)
+    else:
+        mu1=None
+    
+    if n0_2 > 0:
+        mu2= g*n2 + g12*n1 + 1/( landa**3) * g * G(3/2,y2)
+    else:
+        mu2=None
+    
+    return (mu1,mu2)
+
+chemicalPotentialMixtureHF=np.vectorize(chemicalPotentialMixtureHF)
+
+
+
 
 def freeEnergyHF(n1,T,g):
-    # returns the free energy per unit volume of a mixture
     xi=G(3/2,1)
     landa = np.sqrt(2*pi/T) 
     beta=1/T
@@ -80,7 +134,6 @@ def freeEnergyHF(n1,T,g):
 
 
 def chemicalPotentialHF(n1,T,g):
-    # returns the free energy per unit volume of a mixture
     xi=G(3/2,1)
     landa = np.sqrt(2*pi/T) 
     beta=1/T
@@ -94,7 +147,7 @@ def chemicalPotentialHF(n1,T,g):
         mu=None
 
     return mu
-    
+
 
 chemicalPotentialHF=np.vectorize(chemicalPotentialHF)
 
@@ -103,9 +156,7 @@ freeEnergyHF=np.vectorize(freeEnergyHF)
 freeEnergyMixtureHF=np.vectorize(freeEnergyMixtureHF)
 
 
-
 def internalEnergyMixtureHF(n1,n2,T,g,g12):
-    # returns the free energy per unit volume of a mixture
     beta = 1/T
     xi=G(3/2,1)
     landa = np.sqrt(2*pi/T) 
@@ -123,7 +174,6 @@ def internalEnergyMixtureHF(n1,n2,T,g,g12):
 
 
 def internalEnergyHF(n1,T,g):
-    # returns the free energy per unit volume of a mixture
     beta = 1/T
     xi=G(3/2,1)
     landa = np.sqrt(2*pi/T) 

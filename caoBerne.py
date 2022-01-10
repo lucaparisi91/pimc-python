@@ -19,20 +19,16 @@ class caoBernePropagator:
         return (self.__call__(x,y,tau + dt) - self.__call__(x,y,tau - dt) )/(2*dt)
 
 
-
 if __name__ == "__main__":
     x=np.array([1.3,1.5,0.05])
     y =np.array( [1.6, 1.7,0.1] )
     #x=[2,0,0]
     #y=[-2,0,0]
-   
+
     tau=0.1
-   
 
     G = caoBernePropagator(a=1)
-
     
-
     g0=G(x,y ,tau=tau)
     #print( np.log(g0) )
 

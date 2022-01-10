@@ -1,6 +1,6 @@
 from os import system
 import numpy as np
-from numpy.lib.function_base import select
+from numpy.lib.function_base import average, select
 import scipy as sp
 from math import *
 from scipy import linalg
@@ -11,11 +11,11 @@ import operator
 import tqdm
 from functools import reduce
 
+
 def averagePosition(A,J):
     x=spsolve(A,J)
 
     return x
-
 
 def correlationMatrix(A):
     return linalg.inv(A.todense())
@@ -124,11 +124,29 @@ def normalization(A):
 
 
 
-def build2BHarmonic(N):
-    A=np.zeros((N,N) ) - 1
-    A[range(N),range(N)] = N - 1
+def build2BHarmonic(N, ranges=None):
+    if ranges is None:
+        ranges=(range(0,N) , range(0,N) )
+    
+    rangeA,rangeB=ranges
+    A=np.zeros((N,N))
+    
+    if rangeA == rangeB:
+        N1= len(rangeA)
+        A[ rangeA[0]:rangeA[-1] + 1,rangeA[0] : rangeA[-1] + 1 ]=-1
+        A[ rangeA, rangeB  ]=N1 - 1
+    else:
+        N1= len(rangeA)
+        N2= len(rangeB)
+        
+        A[ rangeA[0]:rangeA[-1] + 1,rangeB[0] : rangeB[-1] + 1 ]=-1
+        A[ rangeB[0]:rangeB[-1] + 1,rangeA[0] : rangeA[-1] + 1 ]=-1
+        
+        A[ rangeA, rangeA  ]=N2
+        A[ rangeB, rangeB  ]=N1
+        
+    
     return A
-
 
 
 class builderAMatrixGaussianHamiltion:
@@ -202,7 +220,6 @@ class builderAMatrixGaussianHamiltion:
         kineticMatrixCoefficient=1./(self.timeStep)
 
 
-
         # apply periodic  boundary conditions in time
         for n in range(N):
 
@@ -221,7 +238,6 @@ class builderAMatrixGaussianHamiltion:
             T[ self.head[n] , n , self.head[n] - 1 , n ]=-1 * kineticMatrixCoefficient
             T[ self.head[n] , n , self.head[n] , n ]=diagonalCoefficient* kineticMatrixCoefficient
 
-
             if self.prev[n] is not None:
                 T[ 0  , n , M-1 ,self.prev[n] ] = - 1* kineticMatrixCoefficient
                 diagonalCoefficient=2
@@ -231,8 +247,12 @@ class builderAMatrixGaussianHamiltion:
             if self.head[n] == self.tail[n]:
                 diagonalCoefficient=1
 
-              
-            T[ self.tail[n] , n , self.tail[n] + 1 , n ]=-1* kineticMatrixCoefficient
+            if self.tail[n] +1 >= M:
+                T[ self.tail[n] , n , 0 , self.next[n] ]=-1* kineticMatrixCoefficient
+            else:
+                T[ self.tail[n] , n , self.tail[n] + 1 , n ]=-1* kineticMatrixCoefficient
+            
+            
             T[ self.tail[n] , n , self.tail[n] , n ]=diagonalCoefficient* kineticMatrixCoefficient
 
 
@@ -271,12 +291,12 @@ class builderAMatrixGaussianHamiltion:
 
 
 
-    def add2BHarmonicInteraction(self):
+    def add2BHarmonicInteraction(self,ranges=None):
         N=self.N
         M=self.M
         timeStep=self.timeStep
-        As=[ build2BHarmonic(N) for t in range(M) ]
-
+        As=[ build2BHarmonic(N,ranges=ranges) for t in range(M) ]
+        
         A=np.zeros((M,N,M,N))
 
         for t in range(M):
@@ -285,6 +305,7 @@ class builderAMatrixGaussianHamiltion:
         mask = self.make2BMask()
         
         self.A+=A*mask*timeStep
+
 
     def makeBeadsMask(self):
         '''
@@ -396,32 +417,86 @@ class gaussianObservables:
             l+=1
         return l
 
-
     def averageSquareDistance(self, beadA , beadB ):
         i,nA= beadA
         j,nB = beadB
         return (self.corr[i,nA,i,nA] + self.corr[j,nB,j,nB] - self.corr[i,nA,j,nB ] - self.corr[j,nB,i,nA])*self.dimensions
 
-    def averageLengthSquare(self,n=None):
 
-        if (n is None):
-            l2=0
-            for n in range(self.N):
-                l2+=self.averageLengthSquare(n)
-            
-            return l2
 
-        l2=0
+    
+    def centerOfMassSquared(self):
+        cm2=0
+        for t in range(self.M):
+            for i in range(self.N):
+                cm2+=self.corr[t,i,t,i]
+        return cm2/(self.M*self.N)
+
+
+
+    def averageTwoBodySquareDistance(self):
+        dis2=0
+        for i in range(self.N):
+            for j in range(0,  i):
+                for t in range(self.M):
+                    dis2+=self.averageSquareDistance(  (t,i) , (t,j)  )
+        return dis2
+
+
+    def energy(self,oneBodyHarmonic=True,twoBodyHarmonic=False):
+
+        T = self.averageLengthSquare() / (2* self.timeStep)
+        V=0
+
+        if oneBodyHarmonic:
+            V+= 0.5 * self.centerOfMassSquared() * self.N * self.M
+        
+
+        if twoBodyHarmonic:
+            V+= 0.5 * self.averageTwoBodySquareDistance()
+        
+        
+        beta=self.timeStep * self.M
+
+        return V/self.M - T/(beta) + self.dimensions/(2*self.timeStep)*self.N
+
+        
+
+
+
+    def averageChainLengthSquare(self,n, t0=None , l=None):
 
         head = self.system.head[n] 
         tail = self.system.tail[n] 
-         
-        for t in range(tail, head   ):
-            l2+=self.averageSquareDistance( (t,n),(t+1,n) )
+
+        if l==0:
+            return 0
+
+        if t0 is None:
+            t0=tail
+        if l is None:
+            t1=head
+        else:
+            t1=min(head,t0+l)
         
-        if self.system.next[n] is not None:
-            l2+=self.averageSquareDistance( (self.M-1,n),(0,self.system.next[n]) )   
-        return l2 
+        t0=max(tail,t0)
+        l2=0
+        for t in range(t0, t1 ):
+            l2+=self.averageSquareDistance( (t,n),(t+1,n) )
+
+        if self.system.next[n] is not None and t0+l>head:        
+            # boundary condition
+            l2+=self.averageSquareDistance( (self.M-1,n),(0,self.system.next[n]) )
+            l2+=self.averageChainLengthSquare(self.system.next[n],l=t0+ l - (t1-t0+1)     )
+        return l2
+
+    
+
+    def averageLengthSquare(self,n=None):
+        l2=0
+        for n in range(self.N):
+            l2+=self.averageChainLengthSquare(n=n,t0=None,l=None)
+        return l2
 
     def normalization(self):
         l=self.numberOfLinks()

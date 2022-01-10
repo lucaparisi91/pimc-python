@@ -52,6 +52,8 @@ def V0(na3,nR03,contact=False,minSearch=1e-7,maxSearch=1e+2):
         return V0s
 
 
+
+
 def V0_R0( a  ,contact=False,minSearch=1e-7,maxSearch=1e+1):
     '''
     Return the amplitude of the gaussian potential in units where R0=1 the is one and \hbar=m=1

@@ -9,9 +9,13 @@ import itertools
 import os
 
 
-openSectorMoves=["levy","translate","open/close"]
-closedSectorMoves=["translate","levy","createWorm/deleteWorm","advance","recede","moveHead","moveTail","open/close"]
-switchingMoves=["open/close","createWorm/deleteWorm"]
+closedSectorMoves=["levy","translate"]
+openSectorMoves=["advance","recede","moveHead","moveTail","advanceHeadTail","recedeHeadTail"]
+switchingMoves=["open/close","createWorm/deleteWorm","semiOpen/semiClose","createTwoWorms/deleteTwoWorms","fullOpen/fullClose"]
+
+openSectorMoves=openSectorMoves + closedSectorMoves
+closedSectorMoves+= switchingMoves
+openSectorMoves+= switchingMoves
 
 
 class pathMove:
@@ -21,7 +25,46 @@ class pathMove:
         
     def toJson(self):
         return {"kind" : self.name , "reconstructionMaxLength" : self.l }
+
+
+class generalMove :
+    def __init__(self, **kwds ):
+        self._json={}
+        for key,value in kwds.items():
+            self._json[key]=value
+        
+    def toJson(self):
+        return self._json
     
+
+
+class semiOpenMove(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="semiOpen",reconstructionMaxLength=l,CA=CA,CB=CB)
+
+class semiCloseMove(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="semiClose",reconstructionMaxLength=l,CA=CA,CB=CB)
+
+class fullOpenMove(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="fullOpen",reconstructionMaxLength=l,CA=CA,CB=CB)
+
+class fullCloseMove(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="fullClose",reconstructionMaxLength=l,CA=CA,CB=CB)
+    
+class createTwoWorms(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="createTwoWorms",reconstructionMaxLength=l,CA=CA,CB=CB)
+
+class deleteTwoWorms(generalMove):
+    def __init__( self, setA, setB , CA, CB, l=1 ):
+        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="deleteTwoWorms",reconstructionMaxLength=l,CA=CA,CB=CB)
+
+
+
+
 class translateMove(pathMove):
     def __init__(self,delta):
         super(translateMove,self).__init__("translate",None)
@@ -171,28 +214,18 @@ class tableMove:
                  } for moveDict,move in zip(moves,openSectorMoves + closedSectorMoves) ]
     
 
-
-
-
-
-
-
-
-
-
-
 def getJson(j,queryString):
     
     if queryString=="":
         return j
     pattern="([a-zA-Z0-9]+)(?:\[(\d+)\])?(?:/(.+))?"
     m=re.match(pattern,queryString)
+    print(m[3])
     if m is not None:
         key=m[1]
         index=m[2]
         
         remainder=m[3]
-        
         result=j[key]
         
         if index is not None:
@@ -226,9 +259,6 @@ def setJson(j,queryString,value):
                 if index is not None:
                     result=result[int(index)]
                 setJson(result,remainder,value)
-
-
-
 
 
 
@@ -316,8 +346,6 @@ def setMoveParameters(j):
     return j
 
 
-
-
 def createTable(C,l,lShort,ensamble="canonical",groups=[0],uniform=True):
 
     tab=tableMove()
@@ -326,7 +354,7 @@ def createTable(C,l,lShort,ensamble="canonical",groups=[0],uniform=True):
         tab.addMove("levy","closed",l=l,weight=2,group=group)
         tab.addMove("translate","closed",delta=0.1,group=group)
 
-        tab.addMove("levy","open",l=l)
+        tab.addMove("levy","open",l=l,group=group)
         tab.addMove("moveTail","open",l=lShort,group=group)
         tab.addMove("moveHead","open",l=lShort,group=group)
         tab.addMove("swap","open",l=lShort,group=group)
