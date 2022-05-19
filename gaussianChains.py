@@ -55,6 +55,7 @@ def getMatrixShape(l,boundaries):
         l= l if boundaries == "closed" else l + 1
     return l
 
+
 def freeEnergyMatrix(sigma,l,boundaries="closed"):
     l=getMatrixShape(l,boundaries)
     diagonals=[ np.zeros(l) + 2/sigma**2 , np.zeros(l-1) - 1/sigma**2 , np.zeros(l-1) - 1/sigma**2 ]
@@ -613,3 +614,64 @@ def nLinks(b,n=None):
         l+=1
     return l
     
+def windingCoeff(beta=1,nMax=100,L=1):
+    n=np.arange(1,nMax)
+    return 1 + 2*np.sum( np.exp(-L**2*n**2/(2*beta)) )
+
+def eWindingCoeff(beta,nMax=100,L=1):
+    n=np.arange(1,nMax)
+    x=n**2*L**2/(2*beta**2) * 2
+    Zs=np.exp(-L**2*n**2/(2*beta))
+    return np.sum( x*Zs)/(1 + 2*np.sum(Zs))
+
+
+def _ZFree(M=10,beta=1,V=1,winding=True):
+    Z=V/(2*np.pi*beta)**(3/2)
+    L=V**(1/3.)
+    if winding:
+        Z*= (windingCoeff(beta=beta,nMax=200,L=L)**3 )
+    return Z
+
+
+def ZFree(beta,V,N):
+    Z=np.zeros(N+1)
+    Z[0]=1
+
+    for n in range(1,N+1):
+        for k in range(1,n+1):
+            Z[n]+=_ZFree(beta=k*beta,V=V)*Z[n-k]
+        Z[n]/=n
+    return Z[N]
+
+
+
+
+def singleParticleEnergy(M=10,beta=1,V=1,winding=True):
+    e=1/(2*beta)
+    L=V**(1/3)
+    if (winding):
+        e-=eWindingCoeff(beta=beta,nMax=400,L=L)
+    return e*3
+
+def energyFree(beta,V,N=1):
+    Z=np.zeros(N+1)
+    e=np.zeros(N+1)
+    Z[0]=1
+
+    for n in range(1,N+1):
+        for k in range(1,n+1):
+            Z[n]+=_ZFree(beta=k*beta,V=V)*Z[n-k]
+        for k in range(1,n+1):    
+            Z0=_ZFree(beta=k*beta,V=V)
+            e[n]+=k*singleParticleEnergy(V=V,beta=k*beta)*Z0*Z[n-k] + e[n-k]*Z[n-k] *Z0
+    e/=Z[N]
+
+    return e[N]/N
+
+
+
+
+
+
+
+

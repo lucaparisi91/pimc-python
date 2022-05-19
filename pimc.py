@@ -1,16 +1,12 @@
 import numpy as np 
-import scipy as sp 
-import pandas as pd 
+import scipy as sp
+import pandas as pd
 import os 
 import json
 from pathlib import Path
 import re
-import string
 import tqdm
-
-
-
-
+import re
 
 def loadScalarData( inputFile , label , minIteration=0 , maxIteration=None ):
     with open (inputFile) as f:
@@ -30,9 +26,6 @@ def loadScalarData( inputFile , label , minIteration=0 , maxIteration=None ):
 
 
 
-
-
-import re
 def getJson(j,queryString):
     '''
     Use the queryString to obtain an unique value from the json object j

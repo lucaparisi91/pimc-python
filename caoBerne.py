@@ -2,6 +2,8 @@ from math import cos
 import numpy as np
 import copy
 from numpy.linalg import norm
+
+
 class caoBernePropagator:
 
     def __init__(self,a):

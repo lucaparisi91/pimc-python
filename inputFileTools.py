@@ -7,212 +7,76 @@ import copy
 import json
 import itertools
 import os
+from pimc import moves
 
-
-closedSectorMoves=["levy","translate"]
-openSectorMoves=["advance","recede","moveHead","moveTail","advanceHeadTail","recedeHeadTail"]
-switchingMoves=["open/close","createWorm/deleteWorm","semiOpen/semiClose","createTwoWorms/deleteTwoWorms","fullOpen/fullClose"]
-
-openSectorMoves=openSectorMoves + closedSectorMoves
-closedSectorMoves+= switchingMoves
-openSectorMoves+= switchingMoves
-
-
-class pathMove:
-    def __init__(self,name,l):
-        self.l=l
-        self.name=name
-        
-    def toJson(self):
-        return {"kind" : self.name , "reconstructionMaxLength" : self.l }
-
-
-class generalMove :
-    def __init__(self, **kwds ):
-        self._json={}
-        for key,value in kwds.items():
-            self._json[key]=value
-        
-    def toJson(self):
-        return self._json
-    
-
-
-class semiOpenMove(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="semiOpen",reconstructionMaxLength=l,CA=CA,CB=CB)
-
-class semiCloseMove(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="semiClose",reconstructionMaxLength=l,CA=CA,CB=CB)
-
-class fullOpenMove(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="fullOpen",reconstructionMaxLength=l,CA=CA,CB=CB)
-
-class fullCloseMove(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="fullClose",reconstructionMaxLength=l,CA=CA,CB=CB)
-    
-class createTwoWorms(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="createTwoWorms",reconstructionMaxLength=l,CA=CA,CB=CB)
-
-class deleteTwoWorms(generalMove):
-    def __init__( self, setA, setB , CA, CB, l=1 ):
-        super(semiOpenMove,self).__init__(setA=setA,setB=setB,kind="deleteTwoWorms",reconstructionMaxLength=l,CA=CA,CB=CB)
-
-
-
-
-class translateMove(pathMove):
-    def __init__(self,delta):
-        super(translateMove,self).__init__("translate",None)
-        self.delta=delta
-    def toJson(self):
-        return {"kind" : "translate" , "delta" : self.delta}
-
-class openCloseMove(pathMove):
-    def __init__(self,*args,**kwds):
-        self.C=kwds["C"]
-        del kwds["C"]
-        super(openCloseMove,self).__init__(*args,**kwds)
-        
-    def toJson(self):
-        return { **super(openCloseMove,self).toJson() , "C" : self.C }
-    
-    
-class createDeleteWorm(openCloseMove):
-    def __init__(self,*args,**kwds):
-        self.alpha=kwds["alpha"]
-        self.distribution=kwds["firstParticleDistribution"]
-       
-        
-        del kwds["alpha"]
-        del kwds["firstParticleDistribution"]
-        
-        super(createDeleteWorm,self).__init__(*args,**kwds)
-        
-    def toJson(self):
-        return { **super(createDeleteWorm,self).toJson() , "alpha" : self.alpha, "firstParticleDistribution" : self.distribution }
-    
 
 
     
-def createMove(name,*args,**kwds):
-    if name == "translate":
-        return translateMove(*args,**kwds)
-    else:
-        
-        if name in switchingMoves:
-            if name == "createWorm/deleteWorm":
-                return createDeleteWorm(name,*args,**kwds)
-            else:
-                return openCloseMove(name,*args,**kwds)
-        else:
-            return pathMove(name,*args,**kwds)
-
 
 
 class tableMove:
-    
+
     def __init__(self):
         self.moves=[]
+    
+    def addMove(self,move, sector, p, group=0, *args , **kwds):
+
+        self.moves.append( {"move" : move ,"p": p , "sector" : sector , "set" :  group } )
+    
+    def table( self):
+
+        rows= [ { **move, "move" : move["move"].name  } for move in self.moves ]
+
         
-    def addMove(self,name, sector, weight=1, group=0, *args , **kwds):
-        #if name in [ move.name for move in self.moves ] :
-        #    return False
-        
-        move=createMove(name,*args,**kwds)
-        self.moves.append( {"move" : move ,"weight": weight , "sector" : sector , "set" : group } )
-        
-    def table(self):
-        
-        j=self.jsonInput()
-        
-        entries=[{** move["move"] , "weight" : move["weight"] , "sector":move["sectors"][0] , "set" : move["sets"][0]  }  for move in j ]
-        return pd.concat([pd.DataFrame(entry,index=[0]) for entry in entries ]).reset_index(drop=True)
+        return pd.DataFrame( rows )
+
+
+        return data
+    def closedSectorMoves(self,group):
+
+        return [ move for move in self.moves if ( move["set"]==group and move["sector"]=="closed"  ) ]
+
+    def openSectorMoves(self,group):
+
+        return [ move for move in self.moves if ( move["set"]==group and move["sector"]=="open"  ) ]
+
+    def totProbability(self,group,sector):
+
+        data=self.table()
+
+        data=data[ ( (data["sector"] == sector ) | (data["sector"]=="closed/open") ) & (data["set"]== group) ]
+
+        return np.sum( data["p"])
+
+
+    def __str__(self):
+
+        return str(self.table() )
+    
+    def __repr__(self):
+        return repr( self.table() )
 
     
-    def jsonInput(self):
+    def toJson(self):
+
+        j=[]
+
+        for move in self.moves:
+                jMoves=move["move"].toJson()
+                n=len(jMoves)
+                sectors=[move["sector"] for w in range(n) ]
+                p=move["p"]/n
+                if (move["sector"] == "closed/open"):
+                    sectors[0]="closed"
+                    sectors[1]="open"
+                    p*=2
+
+                for sector,jMove in zip(sectors,jMoves ):
+                    j.append( { "move" : jMove , "weight" : p, "sectors" : [sector], "sets" : [ move["set"] ] } )
         
-
-        def getName(name,sector):
-            m = re.match(r"(.*)/(.*)",name)
-            if m is None:
-                return name
-            else:
-                if sector == "closed":
-                    return m[1]
-                else:
-                    return m[2]
-        
-        
-        groups=list(set([move["set"] for move in self.moves]))
-
-        moves=[]
-        openSectorMoves=list(filter(lambda move: move["sector"] == "open",self.moves))
-        closedSectorMoves=list(filter(lambda move: move["sector"] == "closed",self.moves))
-        
-        Wos=np.zeros( max(groups) + 1 )
-        Wcs=np.zeros( max(groups) + 1 )
-
-
-        for group in groups:
-            
-            groupMoves=list(filter(lambda move: move["set"]==group , self.moves))
-            groupOpenCloseMoves=list(filter(lambda move: move["sector"] == "open/closed",groupMoves))
-            groupOpenSectorMoves=list(filter(lambda move: move["sector"] == "open",groupMoves))
-            groupClosedSectorMoves=list(filter(lambda move: move["sector"] == "closed",groupMoves))
-
-
-            # determinne the total weights for each sector and open/close probability
-            Wc=sum(map(lambda a : a["weight"],groupClosedSectorMoves))
-            Wo=sum(map(lambda a : a["weight"],groupOpenSectorMoves))
-            Woc=sum(map(lambda a : a["weight"],groupOpenCloseMoves))
+        return j
 
         
-        
-            Wc+=Woc
-            pOpen=Woc/Wc
-            Wco=pOpen*Wo/(1-pOpen)
-            Wo+=Wco
-
-            Wos[group]=Wo
-            Wcs[group]=Wc
-
-
-
-            openSectorMoves=openSectorMoves + list(map(
-                lambda move : {**move, 
-                                "sector":"closed" } , groupOpenCloseMoves))
-            
-            closedSectorMoves=closedSectorMoves + list(map(
-                lambda move : {**move, 
-                            **{"sector":"open",
-                                "weight" : move["weight"]*Wo/Wc
-                                }
-                            } , groupOpenCloseMoves))
-            
-                
-                
-        moves= moves +  [  move["move"].toJson() for move in openSectorMoves + closedSectorMoves ]
-
-
-        def getWeight(sector,group):
-            if sector=="open":
-                return Wos[group]
-            if sector=="closed":
-                return Wcs[group]
-            
-
-
-        
-        return  [ { "move" : {**moveDict,"kind" : getName(moveDict["kind"],move["sector"])} ,
-                  "weight" : move["weight"] / getWeight(move["sector"],move["set"]) , "sectors" : [ move["sector"] ] ,
-                   "sets" : [ move["set"] ]
-                 } for moveDict,move in zip(moves,openSectorMoves + closedSectorMoves) ]
-    
 
 def getJson(j,queryString):
     
@@ -346,20 +210,73 @@ def setMoveParameters(j):
     return j
 
 
-def createTable(C,l,lShort,ensamble="canonical",groups=[0],uniform=True):
+
+def createTableSemiCanonical( C,l,lShort,groups=None,uniform=True,delta=1, restriction=None ):
+    if groups is None:
+        groups=[0,1]
+    
+    tab=tableMove( )
+    setA,setB=groups
+
+    if not uniform:
+        raise NotImplementedError("not uniform sampling of initial bead")
+    CAB=C[2]
+    for group in [setA,setB]:
+        tab.addMove( moves.levy(l=l),p=0.8,sector="closed",group=group)
+        tab.addMove( moves.translate(delta=delta),p=0.05,sector="closed",group=group)
+
+        tab.addMove( moves.levy(l=lShort),p=0.1,sector="open",group=group)
+        tab.addMove( moves.translate(delta=delta),p=0.05,sector="open",group=group)
+        tab.addMove( moves.moveHead( l=lShort ),p=0.05,sector="open",group=group)
+        tab.addMove( moves.moveTail( l=lShort ),p=0.05,sector="open",group=group)
+        tab.addMove( moves.swap( l=l ),p=0.1,sector="open",group=group)
+        tab.addMove( moves.advanceRecedeHeadTail( l=lShort, setA=group,setB=(group + 1)%2 ,restriction=restriction ) ,p=0.5,sector="open",group=group)
+
+        tab.addMove( moves.semiOpenClose(l=lShort,setA=group,setB=(group + 1)%2,C=C[group]),p=0.05 ,sector="closed/open" , group=group),
+        tab.addMove( moves.fullOpenClose(l=lShort,setA=group,setB=(group + 1)%2,C=CAB/C[(group + 1)%2] , restriction=restriction),p=0.05 ,sector="closed/open" , group=group),
+        tab.addMove( moves.createDeleteTwoWorms(l=lShort,setA=group,setB=(group + 1)%2,C=[CAB,1] , restriction=restriction ),p=0.05 ,sector="closed/open" , group=group)
+
+    return tab
+
+
+def createTableCanonical(C,l,lShort,groups=None,uniform=True,delta=1):
+
+    if groups is None:
+        groups=[ 0 ]
+    
+    tab=tableMove( )
+    
+    for group in groups:
+        tab.addMove( moves.levy(l=l),p=0.8,sector="closed",group=group)
+        tab.addMove( moves.translate(delta=delta),p=0.05,sector="closed",group=group)
+        tab.addMove( moves.levy(l=lShort),p=0.6 ,sector="open",group=group)
+        tab.addMove( moves.translate(delta=delta),p=0.05,sector="open",group=group)
+        tab.addMove( moves.moveHead( l=lShort ),p=0.05,sector="open",group=group)
+        tab.addMove( moves.moveTail( l=lShort ),p=0.05,sector="open",group=group)
+        tab.addMove( moves.swap( l=l ),p=0.1,sector="open",group=group)
+        tab.addMove( moves.semiOpenClose(l=lShort,setA=group,setB=(group + 1)%2,C=C[group]),p=0.15 ,sector="closed/open" , group=group)
+
+    return tab
+
+
+
+def createTable(C,l,lShort,ensamble="canonical",groups=None,uniform=True,delta=1):
+
+    if ensamble == "semiCanonical":
+        return createTableSemiCanonical(C,l,lShort,groups=groups,uniform=uniform,delta=delta)
 
     tab=tableMove()
 
     for group in groups:
         tab.addMove("levy","closed",l=l,weight=2,group=group)
-        tab.addMove("translate","closed",delta=0.1,group=group)
+        tab.addMove("translate","closed",delta=delta,group=group)
 
         tab.addMove("levy","open",l=l,group=group)
         tab.addMove("moveTail","open",l=lShort,group=group)
         tab.addMove("moveHead","open",l=lShort,group=group)
         tab.addMove("swap","open",l=lShort,group=group)
-        tab.addMove("open/close","open/closed",l=lShort,C=C,group=group)
-        tab.addMove("translate","open",delta=0.1,group=group)
+        tab.addMove("open/close","closed/open",l=lShort,C=C,group=group)
+        tab.addMove("translate","open",delta=delta,group=group)
 
         if (ensamble == "grandCanonical"):
         
@@ -371,7 +288,7 @@ def createTable(C,l,lShort,ensamble="canonical",groups=[0],uniform=True):
             else:
                 firstParticleDistribution="gaussian"
             
-            tab.addMove("createWorm/deleteWorm","open/closed",l=lShort,C=C,alpha=1,group=group,firstParticleDistribution=firstParticleDistribution)
+            tab.addMove("createWorm/deleteWorm","closed/open",l=lShort,C=C,alpha=1,group=group,firstParticleDistribution=firstParticleDistribution)
 
     
     return tab
