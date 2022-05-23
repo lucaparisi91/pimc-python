@@ -2,8 +2,6 @@ import argparse
 from pimc import *
 
 
-
-
 if __name__ == "__main__":
 
 

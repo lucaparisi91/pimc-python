@@ -1,6 +1,9 @@
 
 
+class action:
 
+    def __init__(self):
+        self.minimumDistance=0
 
 
 class twoBodyPrimitiveAction:
@@ -48,12 +51,13 @@ class actions:
         return [   S.toJson()  for S in self._actions ]
 
 
-class caoBerneAction:
+class caoBerneAction (action):
     def __init__(self,a,groups,cutOff=None,mesh=False):
         self.a=a
         self.groups=groups
         self.cutOff=cutOff
         self.mesh=mesh
+        self.minimumDistance=a
 
     def toJson( self):
         G={
