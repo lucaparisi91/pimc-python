@@ -20,11 +20,12 @@ class run:
 
 
 class model:
-    def __init__(self, ensamble , nBeads , actions ):
+    def __init__(self, ensamble , nBeads , actions,nCells=None ):
         self.ensamble=ensamble
         self.actions=actions
         self.nBeads=nBeads
-
+        self.nCells=nCells
+    
 
 
 class simulation:
@@ -63,6 +64,17 @@ class simulation:
             "minimumDistance" :minimumDistance
         }
         j["seed"]=int(random.randint(1, 1000000))
+
+
+        if self.model.nCells is not  None:
+            j["nCells"]=[self.model.nCells for d in range(3)]
+
+            for action in self.model.actions:
+                if not action.mesh:
+                    raise RuntimeError("Not all actions are compatible with meshed configurations")
+
+
+
 
         return j
 

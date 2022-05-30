@@ -4,12 +4,13 @@ class action:
 
     def __init__(self):
         self.minimumDistance=0
+        self.mesh=False
 
 
-class twoBodyPrimitiveAction:
+class twoBodyPrimitiveAction(action):
 
     def __init__( self, potential, groups ):
-
+        super().__init__()
         self.potential=potential
         self.groups=groups
     
@@ -24,10 +25,10 @@ class twoBodyPrimitiveAction:
         }
 
 
-class oneBodyAction:
+class oneBodyAction(action):
 
     def __init__( self, potential, group ):
-
+        super().__init__()
         self.potential=potential
         self.group=group
 
@@ -53,6 +54,7 @@ class actions:
 
 class caoBerneAction (action):
     def __init__(self,a,groups,cutOff=None,mesh=False):
+        super().__init__()
         self.a=a
         self.groups=groups
         self.cutOff=cutOff
