@@ -1,10 +1,9 @@
 
-
 class magnetization:
     def __init__(self, groups , label ):
         self.setA,self.setB=groups
         self.label=label
-    
+
     def toJson(self):
         return   {
             "kind": "magnetization",

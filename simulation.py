@@ -6,8 +6,16 @@ class canonicalEnsamble:
         self.N=N
         self.boxSize=boxSize
         self.T=T
+        
+        
 
-
+class semiCanonicalEnsamble:
+    def __init__(self,N,boxSize,T,deltaMu):
+        self.N=N
+        self.deltaMu=deltaMu
+        self.T=T
+        self.boxSize=boxSize
+        
 class run:
     def __init__(self, nBlocks,stepsPerBlock,correlationSteps=None):
         self.nBlocks=nBlocks
@@ -35,8 +43,15 @@ class simulation:
     
     def toJson(self ):
         j={}
-        N0=self.model.ensamble.N
+        N0=[]
+        if isinstance(self.model.ensamble,semiCanonicalEnsamble):
+            N0=[self.model.ensamble.N/2,self.model.ensamble.N - self.model.ensamble.N/2 ]
+        else:
+            N0=self.model.ensamble.N
+
+        
         nSpecies=len(N0)
+
         j["inverseTemperature"]=float(1/self.model.ensamble.T)
         j["nBeads"]=int(self.model.nBeads)
         j["stepsPerBlock"]=int(self.run.stepsPerBlock)
@@ -47,7 +62,11 @@ class simulation:
         j["checkPointFile"]="latest.hdf5"
         j["saveConfigurations"]=self.run.saveConfigurations
         j["chemicalPotential"]= [0 for n in range(nSpecies)]
-        j["maxParticles"]=[ int(n)+2 for n in N0 ]
+        
+        if isinstance(self.model.ensamble,semiCanonicalEnsamble):
+            j["maxParticles"]=[ np.sum(N0)+2 for n in N0 ]
+        else:
+            j["maxParticles"]=[ int(n)+2 for n in N0 ]
         j["checkPointFile"]="latest.hdf5"
         j["lBox"]=[ float(L) for L in self.model.ensamble.boxSize ]
 
