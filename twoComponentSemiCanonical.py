@@ -1,13 +1,13 @@
 from pytest import param
-import simulation
-import action
-import observable
-import moves
+from . import simulation
+from . import action
+from . import observable
+from . import moves
 import argparse
 import pandas as pd
 import numpy as np
-import theory.free
-import inputFileTools
+from .theory import free
+from . import inputFileTools
 import os
 
 def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu):
@@ -40,15 +40,13 @@ def generateInputFiles(data):
         ratio=int(row["ratio"])
 
         landaC=np.sqrt(2*np.pi)
-        L=( (N/2) * landaC**3/theory.free.G(3/2,1) )**(1/3)
+        L=( (N/2) * landaC**3/free.G(3/2,1) )**(1/3)
         n=N/L**3
         a=(na3/n)**(1/3)
 
         sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,ratio=ratio,deltaMu=0)
         js.append(sim.toJson())
     return(js)
-
-
 
 
 def generateLabels(data):

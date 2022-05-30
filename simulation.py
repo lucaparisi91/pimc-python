@@ -3,6 +3,14 @@ import json
 import random
 
 
+class semiCanonicalEnsamble:
+    def __init__(self,N,boxSize,T,deltaMu):
+        self.N=N
+        self.deltaMu=deltaMu
+        self.T=T
+        self.boxSize=boxSize
+
+
 class canonicalEnsamble:
     def __init__(self,N, boxSize, T):
         self.N=N
@@ -36,10 +44,23 @@ class simulation:
         self.moves=moves
         self.seed=567
     
+
     def toJson(self ):
         j={}
-        N0=self.model.ensamble.N
-        nSpecies=len(N0)
+        N0=[]
+        N0_max=[]
+
+        
+        if type(self.model.ensamble) == semiCanonicalEnsamble:
+            N0=[self.model.ensamble.N/2,self.model.ensamble.N - self.model.ensamble.N/2 ]
+            N0_max = [ np.sum(N0) + 2 for n in N0 ]
+        else:
+            if type(self.model.ensamble) == canonicalEnsamble:
+                N0=self.model.ensamble.N
+                N0_max = [ n+2 for n in N0 ]
+            else:
+                raise RuntimeError( "Unkown ensamble {}".format(type(self.model.ensamble)) )
+
         j["inverseTemperature"]=float(1/self.model.ensamble.T)
         j["nBeads"]=int(self.model.nBeads)
         j["stepsPerBlock"]=int(self.run.stepsPerBlock)
@@ -49,8 +70,12 @@ class simulation:
         j["ensamble"]="grandCanonical"
         j["checkPointFile"]="latest.hdf5"
         j["saveConfigurations"]=self.run.saveConfigurations
-        j["chemicalPotential"]= [0 for n in range(nSpecies)]
-        j["maxParticles"]=[ int(n)+2 for n in N0 ]
+        j["chemicalPotential"]=[0 for n in range(len(N0))]
+
+        if type(self.model.ensamble) == semiCanonicalEnsamble:
+            j["chemicalPotential"][0]=self.model.ensamble.deltaMu
+        
+        j["maxParticles"]=[ int(n) for n in N0_max ]
         j["checkPointFile"]="latest.hdf5"
         j["lBox"]=[ float(L) for L in self.model.ensamble.boxSize ]
 
@@ -67,6 +92,8 @@ class simulation:
 
 
         if self.model.nCells is not  None:
+            if len(N0) > 1 :
+                raise RuntimeError("Mesh action only implemented for one component(so far)")
             j["nCells"]=[self.model.nCells for d in range(3)]
 
             for action in self.model.actions:
