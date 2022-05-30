@@ -1,19 +1,16 @@
-from stat import SF_IMMUTABLE
-from pytest import param
-import simulation
-import action
-import observable
-import moves
+from . import simulation
+from . import action
+from . import observable
+from . import moves
+from .theory import free
 import argparse
 import pandas as pd
 import numpy as np
-import theory.free
-import inputFileTools
+from . import inputFileTools
 import os
 
 
 def createSim( a, boxSize, N, T, C , nBeads):
-
 
     ensamble=simulation.canonicalEnsamble(N=[N],boxSize=boxSize,T=T)
     run=simulation.run(nBlocks=10000,stepsPerBlock=1000,correlationSteps=N)
@@ -45,7 +42,7 @@ def generateInputFiles(data):
 
 
         landaC=np.sqrt(2*np.pi)
-        L=( (N) * landaC**3/theory.free.G(3/2,1) )**(1/3)
+        L=( (N) * landaC**3/free.G(3/2,1) )**(1/3)
         n=N/L**3
         a=(na3/n)**(1/3)
 
@@ -82,19 +79,16 @@ if __name__ == "__main__":
 
     print(data)
 
+
     js=generateInputFiles(data)
 
     labels=generateLabels(data)
-
     
-
     settings=[ {"folder" : os.path.join(args.folder,label) , "jSon" : [ ["input.json", j  ] ] } for label,j in zip(labels,js) ]
-
+    folders=[ os.path.abspath(setting["folder"]) for setting in settings  ]
+    data["folder"]=folders
     inputFileTools.createSimFolders(settings)
-
-
-
-
+    data.to_csv("folders-{}.dat".format(args.folder),sep="\t")
 
 
 
