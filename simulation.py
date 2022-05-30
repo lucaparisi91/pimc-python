@@ -1,21 +1,15 @@
 import numpy as np
 import json
+import random
+
 
 class canonicalEnsamble:
     def __init__(self,N, boxSize, T):
         self.N=N
         self.boxSize=boxSize
         self.T=T
-        
-        
 
-class semiCanonicalEnsamble:
-    def __init__(self,N,boxSize,T,deltaMu):
-        self.N=N
-        self.deltaMu=deltaMu
-        self.T=T
-        self.boxSize=boxSize
-        
+
 class run:
     def __init__(self, nBlocks,stepsPerBlock,correlationSteps=None):
         self.nBlocks=nBlocks
@@ -26,11 +20,12 @@ class run:
 
 
 class model:
-    def __init__(self, ensamble , nBeads , actions ):
+    def __init__(self, ensamble , nBeads , actions,nCells=None ):
         self.ensamble=ensamble
         self.actions=actions
         self.nBeads=nBeads
-
+        self.nCells=nCells
+    
 
 
 class simulation:
@@ -43,15 +38,8 @@ class simulation:
     
     def toJson(self ):
         j={}
-        N0=[]
-        if isinstance(self.model.ensamble,semiCanonicalEnsamble):
-            N0=[self.model.ensamble.N/2,self.model.ensamble.N - self.model.ensamble.N/2 ]
-        else:
-            N0=self.model.ensamble.N
-
-        
+        N0=self.model.ensamble.N
         nSpecies=len(N0)
-
         j["inverseTemperature"]=float(1/self.model.ensamble.T)
         j["nBeads"]=int(self.model.nBeads)
         j["stepsPerBlock"]=int(self.run.stepsPerBlock)
@@ -62,11 +50,7 @@ class simulation:
         j["checkPointFile"]="latest.hdf5"
         j["saveConfigurations"]=self.run.saveConfigurations
         j["chemicalPotential"]= [0 for n in range(nSpecies)]
-        
-        if isinstance(self.model.ensamble,semiCanonicalEnsamble):
-            j["maxParticles"]=[ np.sum(N0)+2 for n in N0 ]
-        else:
-            j["maxParticles"]=[ int(n)+2 for n in N0 ]
+        j["maxParticles"]=[ int(n)+2 for n in N0 ]
         j["checkPointFile"]="latest.hdf5"
         j["lBox"]=[ float(L) for L in self.model.ensamble.boxSize ]
 
@@ -76,12 +60,20 @@ class simulation:
         minimumDistance=max( [S.minimumDistance for S in self.model.actions ]  )
 
         j["movesTable"]=self.moves.toJson()
-
         j["randomInitialCondition"]= {
             "minimumDistance" :minimumDistance
         }
+        j["seed"]=int(random.randint(1, 1000000))
 
-        j["seed"]=self.seed
+
+        if self.model.nCells is not  None:
+            j["nCells"]=[self.model.nCells for d in range(3)]
+
+            for action in self.model.actions:
+                if not action.mesh:
+                    raise RuntimeError("Not all actions are compatible with meshed configurations")
+
+
 
 
         return j

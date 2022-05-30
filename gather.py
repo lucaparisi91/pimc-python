@@ -1,7 +1,11 @@
 import argparse
 from pimc import *
 
+
+
+
 if __name__ == "__main__":
+
 
     parser = argparse.ArgumentParser(description='Gather observables from a folder')
     parser.add_argument('folder', type=str )

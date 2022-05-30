@@ -1,4 +1,3 @@
-from stat import SF_IMMUTABLE
 from pytest import param
 import simulation
 import action
