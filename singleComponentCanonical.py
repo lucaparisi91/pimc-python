@@ -34,7 +34,6 @@ def createSim( a, boxSize, N, T, C , nBeads,nCells=None):
     return(sim)
 
 
-
 def generateInputFiles(data):
     js=[]
     for i,row in data.iterrows():
