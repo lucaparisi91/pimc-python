@@ -17,8 +17,8 @@ def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu,polarization_range=Non
     a12=a*ratio
     actions=[action.caoBerneAction(a=a,groups=[0,0] ),action.caoBerneAction(a=a,groups=[1,1]),action.caoBerneAction(a=a12,groups=[0,1] ) ]
     
+    observables=[observable.thermodynamicEnergy(label="energy",magnetizationDistribution=True,N=N) , observable.virialEnergy(label="eV",magnetizationDistribution=True,N=N) , observable.magnetizationDistribution(groups=[0,1],label="M",magRange=[-N,N]    ) ]
 
-    observables=[observable.thermodynamicEnergy(label="energy",magnetizationDistribution=True,N=N) , observable.virialEnergy(label="eV",magnetizationDistribution=True,N=N) ]
 
     model=simulation.model( ensamble=ensamble,actions=actions,nBeads=nBeads)
 
