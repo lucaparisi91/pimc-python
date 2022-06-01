@@ -10,7 +10,7 @@ from .theory import free
 from . import inputFileTools
 import os
 
-def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu):
+def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu,polarization_range=None):
     ensamble=simulation.semiCanonicalEnsamble(N=N,boxSize=boxSize,T=T,deltaMu=deltaMu)
     run=simulation.run(nBlocks=10000,stepsPerBlock=1000,correlationSteps=N)
     run.saveConfigurations=False
@@ -22,9 +22,23 @@ def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu):
 
     model=simulation.model( ensamble=ensamble,actions=actions,nBeads=nBeads)
 
-    tab= moves.createTableSemiCanonical(C=C,l=int(0.6*nBeads),lShort=int(0.3*nBeads),groups=[0,1],delta=0.3*boxSize[0])
+
+    restriction=None
+    if polarization_range is not None:
+        pMin=polarization_range[0]
+        pMax=polarization_range[1]
+        nA_range=[ int( N/2*(1+pMin) ), int( N/2*(1+pMax))]
+        nB_range=[ N  - nA_range[1], N - nA_range[0] ]
+        restriction=moves.restriction(sets=[0,1],particleRanges=[nA_range, nB_range])
+    
+    tab= moves.createTableSemiCanonical(C=C,l=int(0.6*nBeads),lShort=int(0.3*nBeads),groups=[0,1],delta=0.3*boxSize[0],restriction=restriction)
+
+
+
 
     sim=simulation.simulation(model=model,run=run,observables=observables,moves=tab)
+
+
 
     return(sim)
 
@@ -38,14 +52,21 @@ def generateInputFiles(data):
         C=[ float(row["CA"]),float(row["CB"]),float(row["CAB"]) ]
         nBeads=int(row["nBeads"])
         ratio=int(row["ratio"])
+        polarization_range=None
 
+        if "pMin" in row.keys():
+            polarization_range=[float(row["pMin"]),float(row["pMax"])]
+        
         landaC=np.sqrt(2*np.pi)
         L=( (N/2) * landaC**3/free.G(3/2,1) )**(1/3)
         n=N/L**3
         a=(na3/n)**(1/3)
 
-        sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,ratio=ratio,deltaMu=0)
+        sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,ratio=ratio,deltaMu=0,polarization_range=polarization_range)
         js.append(sim.toJson())
+        
+
+
     return(js)
 
 

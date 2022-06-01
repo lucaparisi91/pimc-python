@@ -181,6 +181,7 @@ class tableMove:
         
         return j
 
+
 def createTableSemiCanonical( C,l,lShort,groups=None,uniform=True,delta=1, restriction=None ):
     if groups is None:
         groups=[0,1]
