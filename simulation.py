@@ -37,29 +37,37 @@ class model:
 
 
 class simulation:
-    def __init__( self, model, run , moves,observables=None,folder="."):
+    def __init__( self, model, run , moves,observables=None,folder=".",N0=None):
         self.model=model
         self.run=run
         self.observables=observables
         self.moves=moves
         self.seed=567
-    
+        self.N0=N0
 
     def toJson(self ):
         j={}
-        N0=[]
+        N0=self.N0
         N0_max=[]
 
-        
+                
         if type(self.model.ensamble) == semiCanonicalEnsamble:
-            N0=[self.model.ensamble.N/2,self.model.ensamble.N - self.model.ensamble.N/2 ]
+            if self.N0 is None:
+                N0=[self.model.ensamble.N/2,self.model.ensamble.N - self.model.ensamble.N/2 ]
+            
             N0_max = [ np.sum(N0) + 2 for n in N0 ]
         else:
             if type(self.model.ensamble) == canonicalEnsamble:
-                N0=self.model.ensamble.N
+                if N0 is not None:
+                    if N0 != self.model.ensamble.N:
+                        raise RuntimeError("Invalid initial atom number.")
+                else:
+                    N0=self.model.ensamble.N
+            
                 N0_max = [ n+2 for n in N0 ]
             else:
                 raise RuntimeError( "Unkown ensamble {}".format(type(self.model.ensamble)) )
+
 
         j["inverseTemperature"]=float(1/self.model.ensamble.T)
         j["nBeads"]=int(self.model.nBeads)
@@ -79,17 +87,16 @@ class simulation:
         j["checkPointFile"]="latest.hdf5"
         j["lBox"]=[ float(L) for L in self.model.ensamble.boxSize ]
 
-        j["actions"]= [action.toJson() for action in self.model.actions]
+        j["action"]= [action.toJson() for action in self.model.actions]
         j["observables"] = [ ob.toJson() for ob in self.observables ]
 
         minimumDistance=max( [S.minimumDistance for S in self.model.actions ]  )
-
+        
         j["movesTable"]=self.moves.toJson()
         j["randomInitialCondition"]= {
             "minimumDistance" :minimumDistance
         }
         j["seed"]=int(random.randint(1, 1000000))
-
 
         if self.model.nCells is not  None:
             if len(N0) > 1 :

@@ -10,9 +10,9 @@ from . import inputFileTools
 import os
 
 
-def createSim( a, boxSize, N, T, C , nBeads,nCells=None):
+def createSim( a, boxSize, N, T, C , nBeads,nCells=None,stepsPerBlock=100):
     ensamble=simulation.canonicalEnsamble(N=[N],boxSize=boxSize,T=T)
-    run=simulation.run(nBlocks=10000,stepsPerBlock=1000,correlationSteps=N)
+    run=simulation.run(nBlocks=10000,stepsPerBlock=stepsPerBlock,correlationSteps=N)
     run.saveConfigurations=False
 
     if nCells is None:
@@ -43,6 +43,8 @@ def generateInputFiles(data):
         na3=float(row["na3"])
         C=float(row["CA"])
         nBeads=int(row["nBeads"])
+        stepsPerBlock=int(row["stepsPerBlock"])
+
 
 
         landaC=np.sqrt(2*np.pi)
@@ -54,8 +56,7 @@ def generateInputFiles(data):
         if "cutOff" in row.keys():
               nCells=max( int(L/row["cutOff"] ) , 3 )
               
-
-        sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,nCells=nCells)
+        sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,nCells=nCells,stepsPerBlock=stepsPerBlock)
         js.append(sim.toJson())
     return(js)
 

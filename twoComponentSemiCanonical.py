@@ -10,6 +10,7 @@ from .theory import free
 from . import inputFileTools
 import os
 
+
 def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu,polarization_range=None):
     ensamble=simulation.semiCanonicalEnsamble(N=N,boxSize=boxSize,T=T,deltaMu=deltaMu)
     run=simulation.run(nBlocks=10000,stepsPerBlock=1000,correlationSteps=N)
@@ -19,9 +20,7 @@ def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu,polarization_range=Non
     
     observables=[observable.thermodynamicEnergy(label="energy",magnetizationDistribution=True,N=N) , observable.virialEnergy(label="eV",magnetizationDistribution=True,N=N) , observable.magnetizationDistribution(groups=[0,1],label="M",magRange=[-N,N]    ) ]
 
-
     model=simulation.model( ensamble=ensamble,actions=actions,nBeads=nBeads)
-
 
     restriction=None
     if polarization_range is not None:
@@ -29,17 +28,14 @@ def createSim( a,ratio, boxSize, N, T, C , nBeads,deltaMu,polarization_range=Non
         pMax=polarization_range[1]
         nA_range=[ int( N/2*(1+pMin) ), int( N/2*(1+pMax))]
         nB_range=[ N  - nA_range[1], N - nA_range[0] ]
-        restriction=moves.restriction(sets=[0,1],particleRanges=[nA_range, nB_range])
+        restriction=moves.restriction( sets=[0,1],particleRanges=[nA_range, nB_range ])
     
+
     tab= moves.createTableSemiCanonical(C=C,l=int(0.6*nBeads),lShort=int(0.3*nBeads),groups=[0,1],delta=0.3*boxSize[0],restriction=restriction)
+    
+    sim=simulation.simulation(model=model,run=run, observables=observables,moves=tab,N0=[ nA_range[0],N-nA_range[0]  ] )
 
-
-
-
-    sim=simulation.simulation(model=model,run=run,observables=observables,moves=tab)
-
-
-
+    
     return(sim)
 
 
