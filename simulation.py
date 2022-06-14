@@ -90,7 +90,10 @@ class simulation:
         j["action"]= [action.toJson() for action in self.model.actions]
         j["observables"] = [ ob.toJson() for ob in self.observables ]
 
-        minimumDistance=max( [S.minimumDistance for S in self.model.actions ]  )
+        if len(self.model.actions) !=0:
+            minimumDistance=max( [S.minimumDistance for S in self.model.actions ]  )
+        else:
+            minimumDistance=0
         
         j["movesTable"]=self.moves.toJson()
         j["randomInitialCondition"]= {

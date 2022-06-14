@@ -1,10 +1,9 @@
 
-
 class magnetization:
     def __init__(self, groups , label ):
         self.setA,self.setB=groups
         self.label=label
-    
+
     def toJson(self):
         return   {
             "kind": "magnetization",
@@ -47,6 +46,37 @@ class pairCorrelation:
             "bins" : self.bins,
             "minx" : self.xRange[0],
             "maxx" : self.xRange[1]
+        }
+
+class oneBody:
+    def __init__(self,group,label,xRange,bins=100 ):
+        self.group=group
+        self.label=label
+        self.bins=bins
+        self.xRange=xRange
+    
+    def toJson(self):
+        return {
+            "kind": "oneBody",
+            "label": self.label,
+            "set" : self.group,
+            "bins" : self.bins,
+            "minx" : self.xRange[0],
+            "maxx" : self.xRange[1]
+        }
+
+
+
+class superfluidFraction:
+    def __init__(self,groups,label ):
+        self.groups=groups
+        self.label=label
+    
+    def toJson(self):
+        return {
+            "kind": "superfluidFraction",
+            "label": self.label,
+            "size" : len(self.groups)
         }
 
 class angleEstimator:

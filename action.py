@@ -62,6 +62,7 @@ class caoBerneAction (action):
         self.minimumDistance=a
 
     def toJson( self):
+
         G={
                 "a": self.a,
                 "kind": "caoBerne"

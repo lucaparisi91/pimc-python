@@ -9,19 +9,20 @@ import numpy as np
 from . import inputFileTools
 import os
 
-
 def createSim( a, boxSize, N, T, C , nBeads,nCells=None,stepsPerBlock=100):
     ensamble=simulation.canonicalEnsamble(N=[N],boxSize=boxSize,T=T)
     run=simulation.run(nBlocks=10000,stepsPerBlock=stepsPerBlock,correlationSteps=N)
     run.saveConfigurations=False
+    actions=[]
+    if a!=0:
+        if nCells is None:
+            actions=[action.caoBerneAction(a=a,groups=[0,0] )]
+        else:
+            actions=[action.caoBerneAction(a=a,groups=[0,0],mesh=True )]
+    
 
-    if nCells is None:
-        actions=[action.caoBerneAction(a=a,groups=[0,0] )]
-    else:
-        actions=[action.caoBerneAction(a=a,groups=[0,0],mesh=True )]
-    
-    
-    observables=[observable.thermodynamicEnergy(label="energy") , observable.virialEnergy(label="eV") ]
+
+    observables=[observable.thermodynamicEnergy(label="energy") , observable.virialEnergy(label="eV"), observable.superfluidFraction(groups=[0,1],label="rho") , observable.oneBody(group=0,label="oneBody",xRange=[0,boxSize[0]/2]) ]
 
     model=simulation.model( ensamble=ensamble,actions=actions,nBeads=nBeads,nCells=nCells)
 
