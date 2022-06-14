@@ -64,7 +64,7 @@ def generateInputFiles(data):
 
         sim=createSim(a=a,N=N,T=T,boxSize=[L,L,L] ,C=C,nBeads=nBeads,ratio=ratio,deltaMu=0,polarization_range=polarization_range)
         js.append(sim.toJson())
-        
+
 
 
     return(js)
